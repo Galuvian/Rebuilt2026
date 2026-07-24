@@ -147,6 +147,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
      * @param drivetrainConstants   Drivetrain-wide constants for the swerve drive
      * @param modules               Constants for each specific module
      */
+
+     /*
     public CommandSwerveDrivetrain(
         AprilTagVision aprilTagVision,
         SwerveDrivetrainConstants drivetrainConstants,
@@ -165,6 +167,35 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // if (RobotBase.isReal() && Constants.OPTIMIZE_CAN) {
         //     optimizeCAN();
         // }
+    } */
+
+    public CommandSwerveDrivetrain(
+            SwerveDrivetrainConstants drivetrainConstants,
+            double odometryUpdateFrequency,
+            SwerveModuleConstants<?, ?, ?>... modules) {
+        super(drivetrainConstants, odometryUpdateFrequency, MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
+        if (Utils.isSimulation()) {
+            startSimThread();
+        }
+        configureAutoBuilder();
+    }
+
+    public CommandSwerveDrivetrain(
+            SwerveDrivetrainConstants drivetrainConstants,
+            double odometryUpdateFrequency,
+            Matrix<N3, N1> odometryStandardDeviation,
+            Matrix<N3, N1> visionStandardDeviation,
+            SwerveModuleConstants<?, ?, ?>... modules) {
+        super(
+            drivetrainConstants,
+            odometryUpdateFrequency,
+            odometryStandardDeviation,
+            visionStandardDeviation,
+            MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
+        if (Utils.isSimulation()) {
+            startSimThread;
+        }
+        configureAutoBuilder();
     }
 
     // /**
@@ -313,19 +344,40 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         }
     }
 
+    private MapleSimSwerveDrivetrain mapleSimSwerveDrivetrain = null;
     private void startSimThread() {
-        m_lastSimTime = Utils.getCurrentTimeSeconds();
-
+        mapleSimSwerveDrivetrain = new MapleSimSwerveDrivetrain(
+            Seconds.of(kSimLoopPeriod),
+            Pounds.of(115), //double check weight
+            Inches.of(27), //bumper length - double check
+            Inches.of(27), //bumper width - double check
+            DCMotor.getKrakenX60(1), //drive motor type
+            DCMotor.getKrakenX60(1), //steer motor type
+            1.2, //wheel COF
+            getModuleLocations(),
+            getPigeon2,
+            getModules(),
+            TunerConstants.FrontLeft,
+            TunerConstants.FrontRight,
+            TunerConstants.BackLeft,
+            TunerConstants.BackRight);
+            
         /* Run simulation at a faster rate so PID gains behave more reasonably */
+        m_simNotifier = new Notifier(mapleSimSwerveDrivetrain::update);
+        m_simNotifier.startPeriodic(kSimLoopPeriod);
+
+        //m_lastSimTime = Utils.getCurrentTimeSeconds();
+
+/*
         m_simNotifier = new Notifier(() -> {
             final double currentTime = Utils.getCurrentTimeSeconds();
             double deltaTime = currentTime - m_lastSimTime;
             m_lastSimTime = currentTime;
 
-            /* use the measured time delta, get battery voltage from WPILib */
+            // use the measured time delta, get battery voltage from WPILib
             updateSimState(deltaTime, RobotController.getBatteryVoltage());
         });
-        m_simNotifier.startPeriodic(kSimLoopPeriod);
+        m_simNotifier.startPeriodic(kSimLoopPeriod); */
     }
 
     /**
@@ -334,6 +386,15 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
      */
     public void setPose(Pose2d pose) {
         this.resetPose(pose);
+    }
+
+    @Override
+    public void resetPose(Pose2d pose) {
+        if (this.mapleSimSwerveDrivetrain != null) {
+            mapleSimSwerveDrivetrain.mapleSwimDrive.setSimulatorWorldPose(pose);
+        }
+        Timer.delay(0.05);
+        super.resetPose(pose);
     }
     
     /**
@@ -360,6 +421,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
      * @param visionRobotPoseMeters The pose of the robot as measured by the vision camera.
      * @param timestampSeconds The timestamp of the vision measurement in seconds.
      */
+
     @Override
     public void addVisionMeasurement(Pose2d visionRobotPoseMeters, double timestampSeconds) {
         super.addVisionMeasurement(visionRobotPoseMeters, Utils.fpgaToCurrentTime(timestampSeconds));
