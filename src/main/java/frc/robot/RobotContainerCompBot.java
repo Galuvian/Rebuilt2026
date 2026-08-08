@@ -108,8 +108,9 @@ public class RobotContainerCompBot extends RobotContainer {
         }
         
         m_drivetrain = new CommandSwerveDrivetrain(
-            m_aprilTagVision,
+            //m_aprilTagVision,
             TunerConstantsCompBot.DrivetrainConstants,
+            250.0,
             TunerConstantsCompBot.FrontLeft, TunerConstantsCompBot.FrontRight, TunerConstantsCompBot.BackLeft, TunerConstantsCompBot.BackRight
         );
         m_hopper = new Hopper(m_drivetrain::getRobotCentricSpeeds); 
@@ -631,3 +632,4 @@ public class RobotContainerCompBot extends RobotContainer {
         return FieldConstants.flipPose(m_autoPreviewTrajectories.get(m_autoPreviewTrajectories.size() - 1).getEndState().pose);
     }
 }
+

@@ -26,6 +26,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -33,6 +34,7 @@ import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Subsystem;
@@ -40,8 +42,11 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.FieldConstants;
 import frc.robot.generated.TunerConstantsTestBot.TunerSwerveDrivetrain;
+import frc.robot.generated.TunerConstantsTestBot;
 import frc.robot.subsystems.shooter.Turret;
 import frc.robot.commands.Shoot;
+
+import frc.robot.utilities.simulation.MapleSimSwerveDrivetrain;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -52,6 +57,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private static final double kSimOdometryFrequencyHz = Constants.ROBOT_FREQUENCY_HZ;
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
+
+    private final com.ctre.phoenix6.swerve.SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds = new com.ctre.phoenix6.swerve.SwerveRequest.ApplyRobotSpeeds();
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
@@ -178,6 +185,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             startSimThread();
         }
         configureAutoBuilder();
+        this.m_aprilTagVision = null;
     }
 
     public CommandSwerveDrivetrain(
@@ -193,9 +201,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             visionStandardDeviation,
             MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
         if (Utils.isSimulation()) {
-            startSimThread;
+            startSimThread();
         }
         configureAutoBuilder();
+        this.m_aprilTagVision = null;
     }
 
     // /**
@@ -276,6 +285,34 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // Also, do the Pigeon
         getPigeon2().optimizeBusUtilization();
     }
+
+    private void configureAutoBuilder() {
+        try {
+            var config = RobotConfig.fromGUISettings();
+            AutoBuilder.configure(
+                    () -> getState().Pose, // Supplier of current robot pose
+                    this::resetPose, // Consumer for seeding pose against auto
+                    () -> getState().Speeds, // Supplier of current robot speeds
+                    // Consumer of ChassisSpeeds and feedforwards to drive the robot
+                    (speeds, feedforwards) -> setControl(m_pathApplyRobotSpeeds
+                            .withSpeeds(speeds)
+                            .withWheelForceFeedforwardsX(feedforwards.robotRelativeForcesXNewtons())
+                            .withWheelForceFeedforwardsY(feedforwards.robotRelativeForcesYNewtons())),
+                    new PPHolonomicDriveController(
+                            // PID constants for translation
+                            new PIDConstants(10, 0, 0),
+                            // PID constants for rotation
+                            new PIDConstants(7, 0, 0)),
+                    config,
+                    // Assume the path needs to be flipped for Red vs Blue, this is normally the case
+                    () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
+                    this // Subsystem for requirements
+                    );
+        } catch (Exception ex) {
+            DriverStation.reportError(
+                    "Failed to load PathPlanner config and configure AutoBuilder", ex.getStackTrace());
+        }
+    }
     
     /**
      * Returns a command that applies the specified control request to this swerve drivetrain.
@@ -312,10 +349,15 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     @Override
     public void periodic() {
         if (RobotBase.isSimulation()) {
-            m_aprilTagVision.updateSimulation(this);
+            if (m_aprilTagVision != null) {
+                m_aprilTagVision.updateSimulation(this);
+            }
+        }
+        
+        if (m_aprilTagVision != null) {
+            m_aprilTagVision.addVisionMeasurements(this);
         }
 
-        m_aprilTagVision.addVisionMeasurements(this);
 
         // This is here because it needs the odometry Pose. Leave it for now.
         Pose2d pose = getPose();
@@ -352,15 +394,15 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             Inches.of(27), //bumper length - double check
             Inches.of(27), //bumper width - double check
             DCMotor.getKrakenX60(1), //drive motor type
-            DCMotor.getKrakenX60(1), //steer motor type
+            DCMotor.getFalcon500(1), //steer motor type
             1.2, //wheel COF
             getModuleLocations(),
-            getPigeon2,
+            getPigeon2(),
             getModules(),
-            TunerConstants.FrontLeft,
-            TunerConstants.FrontRight,
-            TunerConstants.BackLeft,
-            TunerConstants.BackRight);
+            TunerConstantsTestBot.FrontLeft,
+            TunerConstantsTestBot.FrontRight,
+            TunerConstantsTestBot.BackLeft,
+            TunerConstantsTestBot.BackRight);
             
         /* Run simulation at a faster rate so PID gains behave more reasonably */
         m_simNotifier = new Notifier(mapleSimSwerveDrivetrain::update);
@@ -391,7 +433,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     @Override
     public void resetPose(Pose2d pose) {
         if (this.mapleSimSwerveDrivetrain != null) {
-            mapleSimSwerveDrivetrain.mapleSwimDrive.setSimulatorWorldPose(pose);
+            mapleSimSwerveDrivetrain.mapleSimDrive.setSimulationWorldPose(pose);
         }
         Timer.delay(0.05);
         super.resetPose(pose);
@@ -461,7 +503,13 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return super.samplePoseAt(Utils.fpgaToCurrentTime(timestampSeconds));
     }
 
+    private boolean m_pathPlannerConfigured = false;
+
     public void setupPathPlanner() {
+        if (m_pathPlannerConfigured) {
+            return;
+        }
+        m_pathPlannerConfigured = true;
         try {
             // Load the RobotConfig from the settings file created by GUI. 
             // You should probably store this in your Constants file
