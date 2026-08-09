@@ -115,7 +115,7 @@ public class RobotContainerCompBot extends RobotContainer {
         );
         m_hopper = new Hopper(m_drivetrain::getRobotCentricSpeeds); 
 
-        m_drivetrain.setupPathPlanner();
+        // m_drivetrain.setupPathPlanner();
 
         configureBindings();
 

@@ -84,7 +84,7 @@ public class RobotContainerTestBot extends RobotContainer {
             TunerConstantsTestBot.FrontLeft, TunerConstantsTestBot.FrontRight, TunerConstantsTestBot.BackLeft, TunerConstantsTestBot.BackRight
         );
 
-        m_drivetrain.setupPathPlanner();
+        // m_drivetrain.setupPathPlanner();
 
         configureBindings();
 

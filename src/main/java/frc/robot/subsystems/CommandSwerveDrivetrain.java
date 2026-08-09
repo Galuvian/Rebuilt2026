@@ -68,10 +68,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private boolean m_hasAppliedOperatorPerspective = false;
 
     // values from 2024 competition. Maybe should be tuned
-    private static final PIDConstants PATH_PLANNER_TRANSLATION_PID = new PIDConstants(5, 0, 0);
-    private static final PIDConstants PATH_PLANNER_ANGLE_PID       = new PIDConstants(5, 0, 0);
+    // private static final PIDConstants PATH_PLANNER_TRANSLATION_PID = new PIDConstants(5, 0, 0);
+    // private static final PIDConstants PATH_PLANNER_ANGLE_PID       = new PIDConstants(5, 0, 0);
 
-    private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
+    // private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
 
     /* Swerve requests to apply during SysId characterization */
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
@@ -308,6 +308,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                     () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
                     this // Subsystem for requirements
                     );
+            CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
+            CommandScheduler.getInstance().schedule(FollowPathCommand.warmupCommand());
         } catch (Exception ex) {
             DriverStation.reportError(
                     "Failed to load PathPlanner config and configure AutoBuilder", ex.getStackTrace());
@@ -348,6 +350,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     @Override
     public void periodic() {
+        edu.wpi.first.wpilibj.simulation.RoboRioSim.setVInVoltage(12.0);
         if (RobotBase.isSimulation()) {
             if (m_aprilTagVision != null) {
                 m_aprilTagVision.updateSimulation(this);
@@ -435,7 +438,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (this.mapleSimSwerveDrivetrain != null) {
             mapleSimSwerveDrivetrain.mapleSimDrive.setSimulationWorldPose(pose);
         }
-        Timer.delay(0.05);
         super.resetPose(pose);
     }
     
@@ -503,8 +505,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return super.samplePoseAt(Utils.fpgaToCurrentTime(timestampSeconds));
     }
 
-    private boolean m_pathPlannerConfigured = false;
+    // private boolean m_pathPlannerConfigured = false;
 
+    /*
     public void setupPathPlanner() {
         if (m_pathPlannerConfigured) {
             return;
@@ -555,7 +558,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
         CommandScheduler.getInstance().schedule(FollowPathCommand.warmupCommand());
 
-    }
+    } */
 
     /**
      * Get the path follower with events.
