@@ -1,0 +1,8 @@
+{
+  "massKg": 59.0,
+  "wheelMu": 1.2,
+  "bumper": [[0.4195, 0.4195], [0.4195, -0.4195], [-0.4195, -0.4195], [-0.4195, 0.4195]],
+  "footprint": [[0.4195, 0.4195], [0.4195, -0.4195], [-0.4195, -0.4195], [-0.4195, 0.4195]],
+  "driveMotors": {"type": "KRAKEN_X60", "count": 1, "currentLimitA": 100},
+  "steerMotors": {"type": "KRAKEN_X60", "count": 1, "currentLimitA": 40}
+}

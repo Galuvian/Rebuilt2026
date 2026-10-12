@@ -42,6 +42,7 @@ import frc.robot.FieldConstants;
 import frc.robot.generated.TunerConstantsTestBot.TunerSwerveDrivetrain;
 import frc.robot.subsystems.shooter.Turret;
 import frc.robot.commands.Shoot;
+import ligersim.adapter.LigerSim;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -156,7 +157,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // which can cause "stale" status signal warnings from the module Talons.
         super(drivetrainConstants, Utils.isSimulation() ? kSimOdometryFrequencyHz : 0.0, modules);
         // setupPathPlanner();
-        if (Utils.isSimulation()) {
+        if (LigerSim.isActive()) {
+            LigerSim.attachCtreSwerve(this, modules);   // LigerSim server drives the sim
+        } else if (Utils.isSimulation()) {
             startSimThread();
         }
 

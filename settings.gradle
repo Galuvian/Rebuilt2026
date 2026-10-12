@@ -26,5 +26,9 @@ pluginManagement {
     }
 }
 
+// LigerSim adapter (simulation only; a no-op on the robot). Expects a LigerSim checkout next
+// to this repo; override with -Pligersim.dir=<path to LigerSim>.
+includeBuild(providers.gradleProperty('ligersim.dir').getOrElse('../LigerSim') + '/adapter/java')
+
 Properties props = System.getProperties();
 props.setProperty("org.gradle.internal.native.headers.unresolved.dependencies.ignore", "true");
