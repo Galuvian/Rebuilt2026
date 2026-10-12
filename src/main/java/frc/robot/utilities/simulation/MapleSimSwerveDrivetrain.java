@@ -46,9 +46,9 @@ import org.ironmaple.simulation.motorsims.SimulatedMotorController;
  * <p>It replaces the {@link com.ctre.phoenix6.swerve.SimSwerveDrivetrain} class.
  */
 public class MapleSimSwerveDrivetrain {
-    private final Pigeon2SimState pigeonSim;
-    private final SimSwerveModule[] simModules;
-    public final SwerveDriveSimulation mapleSimDrive;
+    private final Pigeon2SimState m_pigeonSim;
+    private final SimSwerveModule[] m_simModules;
+    public final SwerveDriveSimulation m_mapleSimDrive;
 
     /**
      *
@@ -82,8 +82,8 @@ public class MapleSimSwerveDrivetrain {
             SwerveModule<TalonFX, TalonFX, CANcoder>[] modules,
             SwerveModuleConstants<TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>...
                     moduleConstants) {
-        this.pigeonSim = pigeon.getSimState();
-        simModules = new SimSwerveModule[moduleConstants.length];
+        m_pigeonSim = pigeon.getSimState();
+        m_simModules = new SimSwerveModule[moduleConstants.length];
         DriveTrainSimulationConfig simulationConfig = DriveTrainSimulationConfig.Default()
                 .withRobotMass(robotMassWithBumpers)
                 .withBumperSize(bumperLengthX, bumperWidthY)
@@ -99,14 +99,14 @@ public class MapleSimSwerveDrivetrain {
                         Meters.of(moduleConstants[0].WheelRadius),
                         KilogramSquareMeters.of(moduleConstants[0].SteerInertia),
                         wheelCOF));
-        mapleSimDrive = new SwerveDriveSimulation(simulationConfig, new Pose2d());
+        m_mapleSimDrive = new SwerveDriveSimulation(simulationConfig, new Pose2d());
 
-        SwerveModuleSimulation[] moduleSimulations = mapleSimDrive.getModules();
-        for (int i = 0; i < this.simModules.length; i++)
-            simModules[i] = new SimSwerveModule(moduleConstants[0], moduleSimulations[i], modules[i]);
+        SwerveModuleSimulation[] moduleSimulations = m_mapleSimDrive.getModules();
+        for (int i = 0; i < this.m_simModules.length; i++)
+            m_simModules[i] = new SimSwerveModule(moduleConstants[0], moduleSimulations[i], modules[i]);
 
         SimulatedArena.overrideSimulationTimings(simPeriod, 1);
-        SimulatedArena.getInstance().addDriveTrainSimulation(mapleSimDrive);
+        SimulatedArena.getInstance().addDriveTrainSimulation(m_mapleSimDrive);
     }
 
     /**
@@ -119,10 +119,10 @@ public class MapleSimSwerveDrivetrain {
      */
     public void update() {
         SimulatedArena.getInstance().simulationPeriodic();
-        pigeonSim.setRawYaw(
-                mapleSimDrive.getSimulatedDriveTrainPose().getRotation().getMeasure());
-        pigeonSim.setAngularVelocityZ(RadiansPerSecond.of(
-                mapleSimDrive.getDriveTrainSimulatedChassisSpeedsRobotRelative().omegaRadiansPerSecond));
+        m_pigeonSim.setRawYaw(
+                m_mapleSimDrive.getSimulatedDriveTrainPose().getRotation().getMeasure());
+        m_pigeonSim.setAngularVelocityZ(RadiansPerSecond.of(
+                m_mapleSimDrive.getDriveTrainSimulatedChassisSpeedsRobotRelative().omegaRadiansPerSecond));
     }
 
     /**
@@ -233,9 +233,9 @@ public class MapleSimSwerveDrivetrain {
      * <h4>Note:This function is skipped when running on a real robot, ensuring no impact on constants used on real
      * robot hardware.</h4>
      */
-    private static void regulateModuleConstantForSimulation(SwerveModuleConstants<?, ?, ?> moduleConstants) {
+    private static SwerveModuleConstants<?, ?, ?>  regulateModuleConstantForSimulation(SwerveModuleConstants<?, ?, ?> moduleConstants) {
         // Skip regulation if running on a real robot
-        if (RobotBase.isReal()) return;
+        if (RobotBase.isReal()) return moduleConstants;
 
         // Apply simulation-specific adjustments to module constants
         moduleConstants
@@ -261,5 +261,6 @@ public class MapleSimSwerveDrivetrain {
                 .withSteerFrictionVoltage(Volts.of(0.05))
                 // Adjust steer inertia
                 .withSteerInertia(KilogramSquareMeters.of(0.05));
+        return moduleConstants;
     }
 }

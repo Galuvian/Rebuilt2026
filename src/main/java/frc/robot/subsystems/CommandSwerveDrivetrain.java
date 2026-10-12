@@ -38,6 +38,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -59,8 +60,8 @@ import frc.robot.utilities.simulation.MapleSimSwerveDrivetrain;
  */
 public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Subsystem {
     // Values for the simulation
-    private static final double kSimLoopPeriod = 0.005; // 5 ms
-    private static final double kSimOdometryFrequencyHz = Constants.ROBOT_FREQUENCY_HZ;
+    private static final double kSimLoopPeriod = 0.002; // 5 ms
+    private static final double kSimOdometryFrequencyHz = 0; // Constants.ROBOT_FREQUENCY_HZ;
     private Notifier m_simNotifier = null;
     private static final Mass ROBOT_MASS = Pounds.of(145.0);   // mass including bumpers and battery
     private static final Distance ROBOT_WIDTH = Inches.of(27.0 + 3 * 3.0);    // bumper length/width
@@ -273,9 +274,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             }
         }
         
-        if (m_aprilTagVision != null) {
-            m_aprilTagVision.addVisionMeasurements(this);
-        }
+        // if (m_aprilTagVision != null) {
+        //     m_aprilTagVision.addVisionMeasurements(this);
+        // }
 
 
         // This is here because it needs the odometry Pose. Leave it for now.
@@ -334,7 +335,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
      */
     public void setPose(Pose2d pose) {
         if (m_mapleSimSwerveDrivetrain != null) {
-            m_mapleSimSwerveDrivetrain.mapleSimDrive.setSimulationWorldPose(pose);
+            m_mapleSimSwerveDrivetrain.m_mapleSimDrive.setSimulationWorldPose(pose);
+            // this is kind of needed but screws up start of Auto
+            Timer.delay(0.1); // wait for simulation to update              
         }
         this.resetPose(pose);
     }
