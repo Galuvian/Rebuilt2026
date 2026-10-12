@@ -78,13 +78,12 @@ public class RobotContainerTestBot extends RobotContainer {
         }
         
         m_drivetrain = new CommandSwerveDrivetrain(
-            //m_aprilTagVision,
+            m_aprilTagVision,
             TunerConstantsTestBot.DrivetrainConstants,
-            250.0,
             TunerConstantsTestBot.FrontLeft, TunerConstantsTestBot.FrontRight, TunerConstantsTestBot.BackLeft, TunerConstantsTestBot.BackRight
         );
 
-        // m_drivetrain.setupPathPlanner();
+        m_drivetrain.setupPathPlanner();
 
         configureBindings();
 

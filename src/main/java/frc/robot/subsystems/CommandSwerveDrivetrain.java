@@ -1,6 +1,10 @@
 package frc.robot.subsystems;
 
-import static edu.wpi.first.units.Units.*;
+import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.Pounds;
+import static edu.wpi.first.units.Units.Second;
+import static edu.wpi.first.units.Units.Seconds;
+import static edu.wpi.first.units.Units.Volts;
 
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -28,24 +32,25 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.measure.Distance;
+import edu.wpi.first.units.measure.Mass;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.simulation.RoboRioSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+
 import frc.robot.Constants;
 import frc.robot.FieldConstants;
-import frc.robot.generated.TunerConstantsTestBot.TunerSwerveDrivetrain;
-import frc.robot.generated.TunerConstantsTestBot;
-import frc.robot.subsystems.shooter.Turret;
 import frc.robot.commands.Shoot;
-
+import frc.robot.generated.TunerConstantsCompBot;
+import frc.robot.generated.TunerConstantsCompBot.TunerSwerveDrivetrain;
+import frc.robot.subsystems.shooter.Turret;
 import frc.robot.utilities.simulation.MapleSimSwerveDrivetrain;
 
 /**
@@ -53,13 +58,13 @@ import frc.robot.utilities.simulation.MapleSimSwerveDrivetrain;
  * Subsystem so it can easily be used in command-based projects.
  */
 public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Subsystem {
+    // Values for the simulation
     private static final double kSimLoopPeriod = 0.005; // 5 ms
     private static final double kSimOdometryFrequencyHz = Constants.ROBOT_FREQUENCY_HZ;
     private Notifier m_simNotifier = null;
-    private double m_lastSimTime;
-
-    private final com.ctre.phoenix6.swerve.SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds = new com.ctre.phoenix6.swerve.SwerveRequest.ApplyRobotSpeeds();
-
+    private static final Mass ROBOT_MASS = Pounds.of(145.0);   // mass including bumpers and battery
+    private static final Distance ROBOT_WIDTH = Inches.of(27.0 + 3 * 3.0);    // bumper length/width
+    
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
     /* Red alliance sees forward as 180 degrees (toward blue alliance wall) */
@@ -68,10 +73,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private boolean m_hasAppliedOperatorPerspective = false;
 
     // values from 2024 competition. Maybe should be tuned
-    // private static final PIDConstants PATH_PLANNER_TRANSLATION_PID = new PIDConstants(5, 0, 0);
-    // private static final PIDConstants PATH_PLANNER_ANGLE_PID       = new PIDConstants(5, 0, 0);
+    private static final PIDConstants PATH_PLANNER_TRANSLATION_PID = new PIDConstants(5, 0, 0);
+    private static final PIDConstants PATH_PLANNER_ANGLE_PID       = new PIDConstants(5, 0, 0);
 
-    // private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
+    private final SwerveRequest.ApplyRobotSpeeds autoRequest = new SwerveRequest.ApplyRobotSpeeds();
 
     /* Swerve requests to apply during SysId characterization */
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
@@ -79,6 +84,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
 
     private final AprilTagVision m_aprilTagVision;
+
+    private MapleSimSwerveDrivetrain m_mapleSimSwerveDrivetrain = null;
 
     /* SysId routine for characterizing translation. This is used to find PID gains for the drive motors. */
     private final SysIdRoutine m_sysIdRoutineTranslation = new SysIdRoutine(
@@ -155,7 +162,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
      * @param modules               Constants for each specific module
      */
 
-     /*
     public CommandSwerveDrivetrain(
         AprilTagVision aprilTagVision,
         SwerveDrivetrainConstants drivetrainConstants,
@@ -163,7 +169,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     ) {
         // The default Phoenix odometry rate is more aggressive than we need for desktop sim,
         // which can cause "stale" status signal warnings from the module Talons.
-        super(drivetrainConstants, Utils.isSimulation() ? kSimOdometryFrequencyHz : 0.0, modules);
+        // super(drivetrainConstants, Utils.isSimulation() ? kSimOdometryFrequencyHz : 0.0, modules);
+        super(drivetrainConstants, Utils.isSimulation() ? kSimOdometryFrequencyHz : 0.0, MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
+
         // setupPathPlanner();
         if (Utils.isSimulation()) {
             startSimThread();
@@ -174,102 +182,40 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // if (RobotBase.isReal() && Constants.OPTIMIZE_CAN) {
         //     optimizeCAN();
         // }
-    } */
-
-    public CommandSwerveDrivetrain(
-            SwerveDrivetrainConstants drivetrainConstants,
-            double odometryUpdateFrequency,
-            SwerveModuleConstants<?, ?, ?>... modules) {
-        super(drivetrainConstants, odometryUpdateFrequency, MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
-        if (Utils.isSimulation()) {
-            startSimThread();
-        }
-        configureAutoBuilder();
-        this.m_aprilTagVision = null;
     }
 
-    public CommandSwerveDrivetrain(
-            SwerveDrivetrainConstants drivetrainConstants,
-            double odometryUpdateFrequency,
-            Matrix<N3, N1> odometryStandardDeviation,
-            Matrix<N3, N1> visionStandardDeviation,
-            SwerveModuleConstants<?, ?, ?>... modules) {
-        super(
-            drivetrainConstants,
-            odometryUpdateFrequency,
-            odometryStandardDeviation,
-            visionStandardDeviation,
-            MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
-        if (Utils.isSimulation()) {
-            startSimThread();
-        }
-        configureAutoBuilder();
-        this.m_aprilTagVision = null;
-    }
-
-    // /**
-    //  * Constructs a CTRE SwerveDrivetrain using the specified constants.
-    //  * <p>
-    //  * This constructs the underlying hardware devices, so users should not construct
-    //  * the devices themselves. If they need the devices, they can access them through
-    //  * getters in the classes.
-    //  *
-    //  * @param drivetrainConstants     Drivetrain-wide constants for the swerve drive
-    //  * @param odometryUpdateFrequency The frequency to run the odometry loop. If
-    //  *                                unspecified or set to 0 Hz, this is 250 Hz on
-    //  *                                CAN FD, and 100 Hz on CAN 2.0.
-    //  * @param modules                 Constants for each specific module
-    //  */
     // public CommandSwerveDrivetrain(
-    //     AprilTagVision aprilTagVision,
-    //     SwerveDrivetrainConstants drivetrainConstants,
-    //     double odometryUpdateFrequency,
-    //     SwerveModuleConstants<?, ?, ?>... modules
-    // ) {
-    //     super(drivetrainConstants, odometryUpdateFrequency, modules);
-    //     // setupPathPlanner();
+    //         SwerveDrivetrainConstants drivetrainConstants,
+    //         double odometryUpdateFrequency,
+    //         SwerveModuleConstants<?, ?, ?>... modules) {
+    //     super(drivetrainConstants, odometryUpdateFrequency, MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
     //     if (Utils.isSimulation()) {
     //         startSimThread();
     //     }
-
-    //     m_aprilTagVision = aprilTagVision;
+    //     configureAutoBuilder();
+    //     this.m_aprilTagVision = null;
     // }
 
-    // /**
-    //  * Constructs a CTRE SwerveDrivetrain using the specified constants.
-    //  * <p>
-    //  * This constructs the underlying hardware devices, so users should not construct
-    //  * the devices themselves. If they need the devices, they can access them through
-    //  * getters in the classes.
-    //  *
-    //  * @param drivetrainConstants       Drivetrain-wide constants for the swerve drive
-    //  * @param odometryUpdateFrequency   The frequency to run the odometry loop. If
-    //  *                                  unspecified or set to 0 Hz, this is 250 Hz on
-    //  *                                  CAN FD, and 100 Hz on CAN 2.0.
-    //  * @param odometryStandardDeviation The standard deviation for odometry calculation
-    //  *                                  in the form [x, y, theta]ᵀ, with units in meters
-    //  *                                  and radians
-    //  * @param visionStandardDeviation   The standard deviation for vision calculation
-    //  *                                  in the form [x, y, theta]ᵀ, with units in meters
-    //  *                                  and radians
-    //  * @param modules                   Constants for each specific module
-    //  */
     // public CommandSwerveDrivetrain(
-    //     AprilTagVision aprilTagVision,
-    //     SwerveDrivetrainConstants drivetrainConstants,
-    //     double odometryUpdateFrequency,
-    //     Matrix<N3, N1> odometryStandardDeviation,
-    //     Matrix<N3, N1> visionStandardDeviation,
-    //     SwerveModuleConstants<?, ?, ?>... modules
-    // ) {
-    //     super(drivetrainConstants, odometryUpdateFrequency, odometryStandardDeviation, visionStandardDeviation, modules);
+    //         SwerveDrivetrainConstants drivetrainConstants,
+    //         double odometryUpdateFrequency,
+    //         Matrix<N3, N1> odometryStandardDeviation,
+    //         Matrix<N3, N1> visionStandardDeviation,
+    //         SwerveModuleConstants<?, ?, ?>... modules) {
+    //     super(
+    //         drivetrainConstants,
+    //         odometryUpdateFrequency,
+    //         odometryStandardDeviation,
+    //         visionStandardDeviation,
+    //         MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
     //     if (Utils.isSimulation()) {
     //         startSimThread();
     //     }
-
-    //     m_aprilTagVision = aprilTagVision;
+    //     configureAutoBuilder();
+    //     this.m_aprilTagVision = null;
     // }
 
+    @SuppressWarnings("unused")
     private void optimizeCAN() {
         // According to CTRE Support, the variables needed for odometry have
         // already been set with the appropriate update frequency,
@@ -284,36 +230,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
         // Also, do the Pigeon
         getPigeon2().optimizeBusUtilization();
-    }
-
-    private void configureAutoBuilder() {
-        try {
-            var config = RobotConfig.fromGUISettings();
-            AutoBuilder.configure(
-                    () -> getState().Pose, // Supplier of current robot pose
-                    this::resetPose, // Consumer for seeding pose against auto
-                    () -> getState().Speeds, // Supplier of current robot speeds
-                    // Consumer of ChassisSpeeds and feedforwards to drive the robot
-                    (speeds, feedforwards) -> setControl(m_pathApplyRobotSpeeds
-                            .withSpeeds(speeds)
-                            .withWheelForceFeedforwardsX(feedforwards.robotRelativeForcesXNewtons())
-                            .withWheelForceFeedforwardsY(feedforwards.robotRelativeForcesYNewtons())),
-                    new PPHolonomicDriveController(
-                            // PID constants for translation
-                            new PIDConstants(10, 0, 0),
-                            // PID constants for rotation
-                            new PIDConstants(7, 0, 0)),
-                    config,
-                    // Assume the path needs to be flipped for Red vs Blue, this is normally the case
-                    () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
-                    this // Subsystem for requirements
-                    );
-            CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
-            CommandScheduler.getInstance().schedule(FollowPathCommand.warmupCommand());
-        } catch (Exception ex) {
-            DriverStation.reportError(
-                    "Failed to load PathPlanner config and configure AutoBuilder", ex.getStackTrace());
-        }
     }
     
     /**
@@ -350,7 +266,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     @Override
     public void periodic() {
-        edu.wpi.first.wpilibj.simulation.RoboRioSim.setVInVoltage(12.0);
+        RoboRioSim.setVInVoltage(12.0);
         if (RobotBase.isSimulation()) {
             if (m_aprilTagVision != null) {
                 m_aprilTagVision.updateSimulation(this);
@@ -389,40 +305,27 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         }
     }
 
-    private MapleSimSwerveDrivetrain mapleSimSwerveDrivetrain = null;
+    @SuppressWarnings("unchecked")
     private void startSimThread() {
-        mapleSimSwerveDrivetrain = new MapleSimSwerveDrivetrain(
+        m_mapleSimSwerveDrivetrain = new MapleSimSwerveDrivetrain(
             Seconds.of(kSimLoopPeriod),
-            Pounds.of(115), //double check weight
-            Inches.of(27), //bumper length - double check
-            Inches.of(27), //bumper width - double check
-            DCMotor.getKrakenX60(1), //drive motor type
-            DCMotor.getFalcon500(1), //steer motor type
-            1.2, //wheel COF
+            ROBOT_MASS,   // mass including bumpers and battery
+            ROBOT_WIDTH,  // bumper length - robot is square
+            ROBOT_WIDTH,  // bumper width
+            DCMotor.getKrakenX60(1), // drive motor type
+            DCMotor.getKrakenX44(1), // steer motor type
+            1.2, // wheel COF
             getModuleLocations(),
             getPigeon2(),
             getModules(),
-            TunerConstantsTestBot.FrontLeft,
-            TunerConstantsTestBot.FrontRight,
-            TunerConstantsTestBot.BackLeft,
-            TunerConstantsTestBot.BackRight);
+            TunerConstantsCompBot.FrontLeft,
+            TunerConstantsCompBot.FrontRight,
+            TunerConstantsCompBot.BackLeft,
+            TunerConstantsCompBot.BackRight);
             
         /* Run simulation at a faster rate so PID gains behave more reasonably */
-        m_simNotifier = new Notifier(mapleSimSwerveDrivetrain::update);
+        m_simNotifier = new Notifier(m_mapleSimSwerveDrivetrain::update);
         m_simNotifier.startPeriodic(kSimLoopPeriod);
-
-        //m_lastSimTime = Utils.getCurrentTimeSeconds();
-
-/*
-        m_simNotifier = new Notifier(() -> {
-            final double currentTime = Utils.getCurrentTimeSeconds();
-            double deltaTime = currentTime - m_lastSimTime;
-            m_lastSimTime = currentTime;
-
-            // use the measured time delta, get battery voltage from WPILib
-            updateSimState(deltaTime, RobotController.getBatteryVoltage());
-        });
-        m_simNotifier.startPeriodic(kSimLoopPeriod); */
     }
 
     /**
@@ -430,15 +333,10 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
      * @param pose  Pose of the robot, relative to Blue (0,0)
      */
     public void setPose(Pose2d pose) {
-        this.resetPose(pose);
-    }
-
-    @Override
-    public void resetPose(Pose2d pose) {
-        if (this.mapleSimSwerveDrivetrain != null) {
-            mapleSimSwerveDrivetrain.mapleSimDrive.setSimulationWorldPose(pose);
+        if (m_mapleSimSwerveDrivetrain != null) {
+            m_mapleSimSwerveDrivetrain.mapleSimDrive.setSimulationWorldPose(pose);
         }
-        super.resetPose(pose);
+        this.resetPose(pose);
     }
     
     /**
@@ -505,14 +403,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         return super.samplePoseAt(Utils.fpgaToCurrentTime(timestampSeconds));
     }
 
-    // private boolean m_pathPlannerConfigured = false;
-
-    /*
     public void setupPathPlanner() {
-        if (m_pathPlannerConfigured) {
-            return;
-        }
-        m_pathPlannerConfigured = true;
         try {
             // Load the RobotConfig from the settings file created by GUI. 
             // You should probably store this in your Constants file
@@ -525,7 +416,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                     // Robot pose supplier
                     this::getPose,   
                     // Method to reset odometry (will be called if your auto has a starting pose)
-                    this::resetPose,
+                    this::setPose,
                     // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
                     () -> this.getState().Speeds,
                     // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also
@@ -557,8 +448,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         
         CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
         CommandScheduler.getInstance().schedule(FollowPathCommand.warmupCommand());
-
-    } */
+    }
 
     /**
      * Get the path follower with events.
