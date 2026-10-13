@@ -1,8 +1,98 @@
 {
+  "enabled": true,
   "massKg": 59.0,
   "wheelMu": 1.2,
-  "bumper": [[0.4195, 0.4195], [0.4195, -0.4195], [-0.4195, -0.4195], [-0.4195, 0.4195]],
-  "footprint": [[0.4195, 0.4195], [0.4195, -0.4195], [-0.4195, -0.4195], [-0.4195, 0.4195]],
-  "driveMotors": {"type": "KRAKEN_X60", "count": 1, "currentLimitA": 100},
-  "steerMotors": {"type": "KRAKEN_X60", "count": 1, "currentLimitA": 40}
+  "bumper": [
+    [
+      0.4195,
+      0.4195
+    ],
+    [
+      0.4195,
+      -0.4195
+    ],
+    [
+      -0.4195,
+      -0.4195
+    ],
+    [
+      -0.4195,
+      0.4195
+    ]
+  ],
+  "footprint": [
+    [
+      0.4195,
+      0.4195
+    ],
+    [
+      0.4195,
+      -0.4195
+    ],
+    [
+      -0.4195,
+      -0.4195
+    ],
+    [
+      -0.4195,
+      0.4195
+    ]
+  ],
+  "driveMotors": {
+    "type": "KRAKEN_X60",
+    "count": 1,
+    "currentLimitA": 100
+  },
+  "steerMotors": {
+    "type": "KRAKEN_X60",
+    "count": 1,
+    "currentLimitA": 40
+  },
+  "cameras": [
+    {
+      "id": 0,
+      "name": "ArducamBack",
+      "x": -0.2258,
+      "y": -0.3066,
+      "z": 0.383,
+      "rollDeg": 0.0,
+      "pitchDeg": -10.0,
+      "yawDeg": 180.0,
+      "fovRad": 1.3495,
+      "resolutionW": 800,
+      "resolutionH": 600,
+      "latencyMs": 20.0,
+      "noisePx": 0.5
+    },
+    {
+      "id": 1,
+      "name": "ArducamLeft",
+      "x": -0.1666,
+      "y": 0.3269,
+      "z": 0.4387,
+      "rollDeg": 0.0,
+      "pitchDeg": -10.0,
+      "yawDeg": 90.0,
+      "fovRad": 1.3495,
+      "resolutionW": 800,
+      "resolutionH": 600,
+      "latencyMs": 20.0,
+      "noisePx": 0.5
+    },
+    {
+      "id": 2,
+      "name": "ArducamRight",
+      "x": -0.1255,
+      "y": -0.3238,
+      "z": 0.3744,
+      "rollDeg": 0.0,
+      "pitchDeg": -10.0,
+      "yawDeg": -90.0,
+      "fovRad": 1.3495,
+      "resolutionW": 800,
+      "resolutionH": 600,
+      "latencyMs": 20.0,
+      "noisePx": 0.5
+    }
+  ]
 }

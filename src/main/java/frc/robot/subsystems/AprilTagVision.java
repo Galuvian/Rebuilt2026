@@ -48,6 +48,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import frc.robot.Constants;
 import frc.robot.Robot.RobotType;
+import ligersim.adapter.LigerSim;
 
 public class AprilTagVision {
     static final AprilTagFields APRILTAG_FIELD = AprilTagFields.k2026RebuiltAndymark;
@@ -170,14 +171,16 @@ public class AprilTagVision {
         }
     
         m_isRealRobot = RobotBase.isReal();
-        if (Constants.SIMULATION_SUPPORT && !m_isRealRobot) {
+        // Under LigerSim the server synthesizes vision on these camera names (deploy/ligersim.json)
+        if (Constants.SIMULATION_SUPPORT && !m_isRealRobot && !LigerSim.isActive()) {
             // initialize a simulated camera. Must be done after creating the tag layout
             initializeSimulation();
         }
     }
 
-    public void updateSimulation(CommandSwerveDrivetrain swerve) {    
-        m_visionSim.update(swerve.getPose());
+    public void updateSimulation(CommandSwerveDrivetrain swerve) {
+        if (m_visionSim != null)
+            m_visionSim.update(swerve.getPose());
     }
     
     // Update all Pose estimates with the vision measurements
@@ -273,7 +276,8 @@ public class AprilTagVision {
                         // For simulation, the robot just drifts across the field,
                         //  because vision seems to be slightly biased
                         // TODO: remove the test if/when we get a physics-based robot sim
-                        if (m_isRealRobot)
+                        // (LigerSim simulates the true robot, so vision is fused there too)
+                        if (m_isRealRobot || LigerSim.isActive())
                             swerve.addVisionMeasurement(pose, poseEstimate.timestampSeconds, estStdDev.get());
                             
                         globalMeasurements.add(pose);
