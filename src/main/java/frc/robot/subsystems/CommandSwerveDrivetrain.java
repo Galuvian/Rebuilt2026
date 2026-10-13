@@ -46,7 +46,6 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 
-import frc.robot.Constants;
 import frc.robot.FieldConstants;
 import frc.robot.commands.Shoot;
 import frc.robot.generated.TunerConstantsCompBot;
@@ -171,7 +170,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         // The default Phoenix odometry rate is more aggressive than we need for desktop sim,
         // which can cause "stale" status signal warnings from the module Talons.
         // super(drivetrainConstants, Utils.isSimulation() ? kSimOdometryFrequencyHz : 0.0, modules);
-        super(drivetrainConstants, Utils.isSimulation() ? kSimOdometryFrequencyHz : 0.0, MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
+        super(drivetrainConstants, Utils.isSimulation() ? kSimOdometryFrequencyHz : 0.0, 
+                MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
 
         // setupPathPlanner();
         if (Utils.isSimulation()) {
@@ -306,6 +306,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         }
     }
 
+    // WARNING: simulation only works (sort of) with a Falcon500 as the steer motor
     @SuppressWarnings("unchecked")
     private void startSimThread() {
         m_mapleSimSwerveDrivetrain = new MapleSimSwerveDrivetrain(
@@ -314,7 +315,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             ROBOT_WIDTH,  // bumper length - robot is square
             ROBOT_WIDTH,  // bumper width
             DCMotor.getKrakenX60(1), // drive motor type
-            DCMotor.getKrakenX44(1), // steer motor type
+            DCMotor.getFalcon500(1), // steer motor type
             1.2, // wheel COF
             getModuleLocations(),
             getPigeon2(),
@@ -337,7 +338,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (m_mapleSimSwerveDrivetrain != null) {
             m_mapleSimSwerveDrivetrain.m_mapleSimDrive.setSimulationWorldPose(pose);
             // this is kind of needed but screws up start of Auto
-            Timer.delay(0.1); // wait for simulation to update              
+            Timer.delay(0.05); // wait for simulation to update              
         }
         this.resetPose(pose);
     }
@@ -419,7 +420,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                     // Robot pose supplier
                     this::getPose,   
                     // Method to reset odometry (will be called if your auto has a starting pose)
-                    this::setPose,
+                    null,
                     // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
                     () -> this.getState().Speeds,
                     // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also

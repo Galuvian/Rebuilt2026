@@ -233,12 +233,12 @@ public class MapleSimSwerveDrivetrain {
      * <h4>Note:This function is skipped when running on a real robot, ensuring no impact on constants used on real
      * robot hardware.</h4>
      */
-    private static SwerveModuleConstants<?, ?, ?>  regulateModuleConstantForSimulation(SwerveModuleConstants<?, ?, ?> moduleConstants) {
+    private static void regulateModuleConstantForSimulation(SwerveModuleConstants<?, ?, ?> moduleConstant) {
         // Skip regulation if running on a real robot
-        if (RobotBase.isReal()) return moduleConstants;
+        if (RobotBase.isReal()) return;
 
         // Apply simulation-specific adjustments to module constants
-        moduleConstants
+        moduleConstant
                 // Disable encoder offsets
                 .withEncoderOffset(0)
                 // Disable motor inversions for drive and steer motors
@@ -261,6 +261,5 @@ public class MapleSimSwerveDrivetrain {
                 .withSteerFrictionVoltage(Volts.of(0.05))
                 // Adjust steer inertia
                 .withSteerInertia(KilogramSquareMeters.of(0.05));
-        return moduleConstants;
     }
 }
