@@ -1,0 +1,51 @@
+{
+  "format": 1,
+  "_comment": "LigerSim robot package (contracts/robot-package/PACKAGE.md in the LigerSim repo). Simulation only: the robot never reads this file. CAN ids, gear ratios, limits and zeroing come from the subsystem code; positions marked GUESS were not in the code and need checking against the real robot or CAD.",
+
+  "joints": [
+    { "id": "intakePivot", "kind": "rotate",
+      "_comment": "IntakePivot: TalonFX 16, GEAR_RATIO 1/24, zeroed at boot (setPosition(0)), STOW -5 deg, DEPLOY 80 deg. GUESS: pivot on the front edge, 0.12 m up; 0 rad = arm pointing up, positive tips it forward/down.",
+      "origin": { "xyz": [0.30, 0, 0.12] }, "axis": [0, 1, 0],
+      "min": -0.10, "max": 1.45, "initial": 0.0,
+      "source": { "talon": 16, "reduction": 24.0 } },
+    { "id": "turret", "kind": "rotate",
+      "_comment": "Turret: TalonFX 21, 54/12 * 100/10 = 45:1, code angle = sensor/45 turns + 180 deg, so sensor 0 is the turret facing backward (zero = pi). Limits are the code's -190..165 deg plus the 180 deg offset. TURRET_OFFSET from the code; GUESS: 0.45 m up.",
+      "origin": { "xyz": [-0.0651, -0.1238, 0.45] }, "axis": [0, 0, 1],
+      "min": -0.175, "max": 6.021, "zero": 3.14159265, "initial": 0.0,
+      "source": { "talon": 21, "reduction": 45.0 } },
+    { "id": "hood", "parent": "turret", "kind": "rotate",
+      "_comment": "Hood: TalonFX 11, GEAR_RATIO 12/36 * 15/24 * 10/174 = 0.01197 (83.5:1), zeroed at boot. Visual only while the launcher uses aim assist. GUESS: 0.10 m forward of the turret axis, 0.08 m up, positive raises.",
+      "origin": { "xyz": [0.10, 0, 0.08] }, "axis": [0, -1, 0],
+      "min": 0.0, "max": 0.80, "initial": 0.0,
+      "source": { "talon": 11, "reduction": 83.52 } }
+  ],
+
+  "motors": [
+    { "talon": 9,  "motor": "KRAKEN_X60", "lagS": 0.6, "_comment": "flywheel leader" },
+    { "talon": 10, "motor": "KRAKEN_X60", "lagS": 0.6, "_comment": "flywheel follower (opposed)" },
+    { "talon": 19, "_comment": "hopper transfer" }
+  ],
+
+  "intakes": [
+    { "id": "front", "frame": "intakePivot",
+      "_comment": "IntakeRoller: TalonFX 17, intake 3500 rpm (58 rps), fast 1.57x, outtake -5000 rpm. GUESS: the region sits at the end of a 0.25 m arm and overhangs the 0.42 m bumper when deployed.",
+      "pose": { "xyz": [0, 0, 0.25] }, "size": [0.25, 0.60, 0.25],
+      "collect": [ { "talon": 17, "quantity": "velocity", "above": 20 },
+                   { "joint": "intakePivot", "above": 1.0 } ],
+      "eject":   [ { "talon": 17, "quantity": "velocity", "below": -20 } ] }
+  ],
+
+  "storage": { "capacity": 40, "transitS": 0.5, "discipline": "fifo",
+               "_comment": "GUESS: hopper capacity and the time from the intake to the kicker." },
+
+  "launchers": [
+    { "id": "shooter", "frame": "turret",
+      "_comment": "Aim assist first: the server solves the speed to the hub at this fixed pitch (GUESS 60 deg), so the hood and flywheel speed do not change the shot yet. The robot still has to feed: kicker (18) and feeder belts (22) both running, which Shoot.java does once the flywheel (9) is at speed and the turret is out of its dead zone. Switch aim to joints with a flywheel speedPerRps once the shot physics look right.",
+      "pose": { "xyz": [0.10, 0, 0.12], "rpy": [0, -1.05, 0] },
+      "flywheel": { "talon": 9, "speedPerRps": 0.075, "minRps": 15 },
+      "feed": [ { "talon": 18, "quantity": "velocity", "above": 5 },
+                { "talon": 22, "quantity": "velocity", "above": 5 } ],
+      "feedRateHz": 8,
+      "aim": "assist", "maxSpeedMps": 20 }
+  ]
+}
