@@ -631,4 +631,3 @@ public class RobotContainerCompBot extends RobotContainer {
         return FieldConstants.flipPose(m_autoPreviewTrajectories.get(m_autoPreviewTrajectories.size() - 1).getEndState().pose);
     }
 }
-
