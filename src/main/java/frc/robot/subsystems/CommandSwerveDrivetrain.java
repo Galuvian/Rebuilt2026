@@ -235,8 +235,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     @Override
     public void periodic() {
-        RoboRioSim.setVInVoltage(12.0);
         if (RobotBase.isSimulation()) {
+            RoboRioSim.setVInVoltage(12.0);
             if (m_aprilTagVision != null) {
                 m_aprilTagVision.updateSimulation(this);
             }
