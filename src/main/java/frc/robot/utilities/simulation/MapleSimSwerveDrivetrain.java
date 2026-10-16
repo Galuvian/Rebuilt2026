@@ -80,8 +80,7 @@ public class MapleSimSwerveDrivetrain {
             Translation2d[] moduleLocations,
             Pigeon2 pigeon,
             SwerveModule<TalonFX, TalonFX, CANcoder>[] modules,
-            SwerveModuleConstants<TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>...
-                    moduleConstants) {
+            SwerveModuleConstants<TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>... moduleConstants) {
         m_pigeonSim = pigeon.getSimState();
         m_simModules = new SimSwerveModule[moduleConstants.length];
         DriveTrainSimulationConfig simulationConfig = DriveTrainSimulationConfig.Default()
@@ -173,14 +172,11 @@ public class MapleSimSwerveDrivetrain {
     }
 
     public static class TalonFXMotorControllerWithRemoteCanCoderSim extends TalonFXMotorControllerSim {
-        private final int encoderId;
         private final CANcoderSimState remoteCancoderSimState;
 
         public TalonFXMotorControllerWithRemoteCanCoderSim(TalonFX talonFX, CANcoder cancoder) {
             super(talonFX);
-            this.remoteCancoderSimState = cancoder.getSimState();
-
-            this.encoderId = cancoder.getDeviceID();
+            remoteCancoderSimState = cancoder.getSimState();
         }
 
         @Override

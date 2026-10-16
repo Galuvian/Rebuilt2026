@@ -59,8 +59,8 @@ import frc.robot.utilities.simulation.MapleSimSwerveDrivetrain;
  */
 public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Subsystem {
     // Values for the simulation
-    private static final double kSimLoopPeriod = 0.002; // 5 ms
-    private static final double kSimOdometryFrequencyHz = 0; // Constants.ROBOT_FREQUENCY_HZ;
+    private static final double kSimLoopPeriod = 0.002; // 2 ms
+    private static final double kSimOdometryFrequencyHz = 0; // use default value
     private Notifier m_simNotifier = null;
     private static final Mass ROBOT_MASS = Pounds.of(145.0);   // mass including bumpers and battery
     private static final Distance ROBOT_WIDTH = Inches.of(27.0 + 3 * 3.0);    // bumper length/width
@@ -169,7 +169,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     ) {
         // The default Phoenix odometry rate is more aggressive than we need for desktop sim,
         // which can cause "stale" status signal warnings from the module Talons.
-        // super(drivetrainConstants, Utils.isSimulation() ? kSimOdometryFrequencyHz : 0.0, modules);
         super(drivetrainConstants, Utils.isSimulation() ? kSimOdometryFrequencyHz : 0.0, 
                 MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
 
@@ -184,37 +183,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         //     optimizeCAN();
         // }
     }
-
-    // public CommandSwerveDrivetrain(
-    //         SwerveDrivetrainConstants drivetrainConstants,
-    //         double odometryUpdateFrequency,
-    //         SwerveModuleConstants<?, ?, ?>... modules) {
-    //     super(drivetrainConstants, odometryUpdateFrequency, MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
-    //     if (Utils.isSimulation()) {
-    //         startSimThread();
-    //     }
-    //     configureAutoBuilder();
-    //     this.m_aprilTagVision = null;
-    // }
-
-    // public CommandSwerveDrivetrain(
-    //         SwerveDrivetrainConstants drivetrainConstants,
-    //         double odometryUpdateFrequency,
-    //         Matrix<N3, N1> odometryStandardDeviation,
-    //         Matrix<N3, N1> visionStandardDeviation,
-    //         SwerveModuleConstants<?, ?, ?>... modules) {
-    //     super(
-    //         drivetrainConstants,
-    //         odometryUpdateFrequency,
-    //         odometryStandardDeviation,
-    //         visionStandardDeviation,
-    //         MapleSimSwerveDrivetrain.regulateModuleConstantsForSimulation(modules));
-    //     if (Utils.isSimulation()) {
-    //         startSimThread();
-    //     }
-    //     configureAutoBuilder();
-    //     this.m_aprilTagVision = null;
-    // }
 
     @SuppressWarnings("unused")
     private void optimizeCAN() {
@@ -274,10 +242,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             }
         }
         
-        // if (m_aprilTagVision != null) {
-        //     m_aprilTagVision.addVisionMeasurements(this);
-        // }
-
+        if (m_aprilTagVision != null) {
+            m_aprilTagVision.addVisionMeasurements(this);
+        }
 
         // This is here because it needs the odometry Pose. Leave it for now.
         Pose2d pose = getPose();
@@ -419,7 +386,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             AutoBuilder.configure(
                     // Robot pose supplier
                     this::getPose,   
-                    // Method to reset odometry (will be called if your auto has a starting pose)
+                    // null - no need to set pose at very start of Auto
                     null,
                     // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
                     () -> this.getState().Speeds,
